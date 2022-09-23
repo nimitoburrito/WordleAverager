@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<HTML class="dark">
+
+<head>
+    <meta charset="utf-8">
+    <title>Wordle Averager</title>
+    <meta name="viewport" content="initial-scale=1.0, width=device-width">
+    <link href="https://fonts.googleapis.com/css2?family=Kadwa:wght@700&family=Open+Sans&display=swap" rel="stylesheet">
+    <style>
+        h1 {
+            width: 100%;
+            text-align: center;
+            font-family: 'Kadwa', serif;
+            font-weight: 1000;
+            line-height: 1.425rem;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: large;
+        }
+
+        .light body {
+            background-color: white;
+        }
+
+        .light #content {
+            background-color: rgb(238, 238, 238);
+        }
+
+        .dark body {
+            background-color: rgb(9, 9, 9);
+            color: white;
+        }
+
+        .dark #content {
+            background-color: #121213;
+        }
+
+        .dark button {
+            color: white;
+            /*font-weight: bold;*/
+        }
+
+
+        #content {
+            border-radius: 8px;
+            max-width: 1000px;
+            min-width: 275px;
+            padding: 20px;
+            padding-top: 35px;
+            padding-bottom: 35px;
+
+        }
+
+       @media (min-width: 800px) {
+            #content {
+                padding: 25px;
+            }
+        } 
+
+        html {
+            line-height: 1.2rem;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 24px;
+            text-align: center;
+            display: flex;
+            height: 100%;
+        }
+
+        body {
+            margin: auto;
+        }
+
+        #runbutton {
+            font-size: 75%;
+            font-weight: 600;
+            padding: 10px 20px;
+            background: #538d4e;
+            border: none;
+            border-radius: 4px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+
+        #copybutton {
+            font-size: 75%;
+            font-weight: 600;
+            padding: 10px 20px;
+            background: #538d4e;
+            border: none;
+            border-radius: 4px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 75px;
+        }
+
+        #bars {
+            display: inline-block;
+            text-align: left;
+        }
+
+        .bar {
+            text-align: right;
+            font-size: 50%;
+            font-weight: bold;
+            display: inline-block;
+            height: 18px;
+            padding-right: 5px;
+            padding-bottom: 7px;
+            margin-left: 5px;
+            line-height: 1.1rem;
+        }
+
+        .hide {
+            display: none;
+        }
+
+        table {
+            margin: 0 auto;
+            width: 350px;
+            line-height: 0.85rem;
+        }
+
+        th {
+            font-size: 55%;
+            font-weight: 100;
+            vertical-align: top;
+        }
+
+        #output {
+            line-height: 1.5rem;
+        }
+
+        #scoreDist {
+            margin-bottom: -7.5px;
+        }
+    </style>
+
+    <script>
+        function toggletheme() {
+            document.documentElement.classList.toggle("dark")
+            document.documentElement.classList.toggle("light")
+        }
+        function copy() {
+            navigator.clipboard.writeText(`Wordle ${day} ${userScore}/6 | Average: ${average, toFixed(2)}/6 congrats wordleavg.netlify.app`)
+        }
+        function days_between(date1, date2) {
+            // The number of milliseconds in one day
+            const ONE_DAY = 1000 * 60 * 60 * 24;
+            // Calculate the difference in milliseconds
+            const differenceMs = Math.abs(date1 - date2);
+            // Convert back to days and return
+            return Math.round(differenceMs / ONE_DAY);
+        }
+        const currentWordle = days_between(new Date('2021-06-19'), Date.now())
+        window.addEventListener('DOMContentLoaded', function () {
+            document.getElementById("day").value = currentWordle
+            document.getElementById("day").setAttribute("max", currentWordle)
+        })
+        async function run() {
+            let outputString = ""
+            const output = document.getElementById("output")
+            output.innerHTML = "<small> Loading... </small>"
+            const day = document.getElementById("day").value
+            const userScore = document.getElementById("score").value
+
+            if (!day || !userScore) {
+                output.innerHTML = "<small> Please enter valid values </small>"
+                return
+            }
+            if (document.getElementById("day").value > currentWordle) {
+                output.innerHTML = "<small> Please enter current or previous Wordle </small>"
+                return
+            }
+
+            const result = await fetch(`https://nixinova-cors-proxy.herokuapp.com/https://api.twitter.com/2/tweets/search/recent?query="wordle+${day}"&max_results=100`, {
+                headers: {
+                    Authorization: "Bearer AAAAAAAAAAAAAAAAAAAAAL5deAEAAAAARqu8ZnYDE5coANy9KU3g6FgowPU%3DOKl6kxPgVKe5nPHKOytuXfzAbJMKoR258CcXEN3NZU0w72Xjem"
+                }
+            })
+                .catch(function (error) {
+                    outputString = "<small> An error occured </small>"
+                })
+
+            document.getElementById("table1").classList.remove("hide")
+            document.getElementById("stats").classList.remove("hide")
+            document.getElementById("scoreDist").classList.remove("hide")
+            //document.getElementById("inputs").classList.add("hide")
+
+            const jsonResult = await result.json()
+            const counters = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 }
+            let total = 0
+            for (let tweet of jsonResult.data) {
+                let text = tweet.text
+                if (text.includes(`Wordle ${day}`)) {
+                    if (text.includes("/6")) total++
+                    if (text.includes(" 1/6")) counters[1]++
+                    if (text.includes(" 2/6")) counters[2]++
+                    if (text.includes(" 3/6")) counters[3]++
+                    if (text.includes(" 4/6")) counters[4]++
+                    if (text.includes(" 5/6")) counters[5]++
+                    if (text.includes(" 6/6")) counters[6]++
+                    if (text.includes(" X/6")) counters[7]++
+                }
+            }
+            let average = 0
+            for (let i in counters) {
+                let amount = counters[i]
+                if (i != 7) {
+                    average += i * amount
+                }
+            }
+
+            average /= total
+            document.getElementById("stats").innerHTML = ""
+            document.getElementById("avgScore").innerHTML = ""
+            document.getElementById("winRate").innerHTML = ""
+            document.getElementById("solved").innerHTML = ""
+            document.getElementById("scoreDist").innerHTML = ""
+            document.getElementById("stats").innerHTML += `<strong> <small> STATISTICS </small> </strong> <br>`
+            document.getElementById("stats").innerHTML += `<small> (out of ${total} tweets) </small> <br> <br>`
+            document.getElementById("avgScore").innerHTML += `${average.toFixed(2)}`
+            document.getElementById("winRate").innerHTML += `${((total - counters[7]) / total * 100).toFixed(2)}`
+            document.getElementById("solved").innerHTML += `${counters[7]}`
+            document.getElementById("scoreDist").innerHTML += `<strong> <small> SCORE DISTRIBUTION </small> </strong>`
+
+            outputString += `<div id="bars">`
+            for (let i in counters) {
+                let amount = counters[i]
+                if (i != 7) {
+                    outputString += `<small> ${i} </small> <span class="bar" style="width:${amount / total * 700}px; background: ${amount == 0 ? "#3a3a3c" : "#538d4e"};"> ${amount} </span> <br>`
+                }
+            }
+            outputString += `</div>`
+            outputString += `<br> <br> ${userScore < average ? "Congratulations! You did better than average today" : userScore > average ? "Better luck next time" : "Didn't think it would happen"}`
+            /*for (let tweet of jsonResult.data) {
+                let text = tweet.text
+                outputString += "<br><br>" + text.replaceAll("\n", "<br>")
+            }*/
+            console.log(jsonResult)
+            output.innerHTML = outputString
+
+        }
+    </script>
+</head>
+
+<body>
+    <h1>
+        Wordle <br> Averager
+    </h1>
+    <div id="content">
+        <form action="javascript:void(0)" id="inputs">
+            <label>WORDLE NUMBER</label>
+            <br>
+            <input type=number id="day">
+            <br>
+            <br>
+            <label>YOUR SCORE</label>
+            <br>
+            <input type=number min=1 max=6 id="score">
+            <br>
+            <button id="runbutton" onclick=run()>LET'S GO!</button>
+        </form>
+        <div id="stats" class="hide"></div>
+        <table id="table1" class="hide">
+            <tr>
+                <td id="winRate"></td>
+                <td id="avgScore"></td>
+                <td id="solved"></td>
+            </tr>
+            <tr>
+                <th>Win %</th>
+                <th>Avg Score <br> </th>
+                <th>Unsolved</th>
+            </tr>
+        </table>
+        <p id="scoreDist" class="hide"></p>
+        <div id="output"></div>
+    </div>
+    <!--<button id="copybutton" onlclick=copy()>COPY</button>
+    <button id="themebutton" onclick=toggletheme()>THEME</button> -->
+</body>
+
+</HTML>
